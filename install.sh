@@ -22,5 +22,5 @@ sudo rpm-ostree ex apply-live
 sudo systemctl enable --now zerotier-one.service
 
 # Set routing to ZT's interface
-ZT_IFACES=$(ip link show | awk -F': ' '/^[0-9]+: zt/{print $2}')
-sudo route add -host 255.255.255.255 dev "$IFACE"
+ZTIFACE=$(ip link show | awk -F': ' '/^[0-9]+: zt/{print $2}')
+sudo route add -host 255.255.255.255 dev "$ZTIFACE"
