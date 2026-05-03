@@ -15,12 +15,12 @@ EOF
 # Install ZeroTier
 rpm-ostree install zerotier-one
 
-# Apply changes live without requering reboot
-sudo rpm-ostree ex apply-live
-
 # Enable and start ZeroTier service
 sudo systemctl enable --now zerotier-one.service
 
 # Set routing to ZT's interface
 ZTIFACE=$(ip link show | awk -F': ' '/^[0-9]+: zt/{print $2}')
 sudo route add -host 255.255.255.255 dev "$ZTIFACE"
+
+# Prompt to reboot for applying changes
+echo "[*] Done. Reboot required."
