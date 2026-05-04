@@ -6,7 +6,7 @@ read -rp "Enter ZeroTier network ID: " NETWORK_ID
 read -rp "Enable LAN gaming compatibility fixes? (y/n): " ENABLE_GAMING_FIX
 ENABLE_GAMING_FIX=$(echo "$ENABLE_GAMING_FIX" | tr '[:upper:]' '[:lower:]')
 
-sudo tee >/dev/null /etc/yum.repos.d/zerotier.repo <<'EOF'
+sudo tee /etc/yum.repos.d/zerotier.repo >/dev/null <<'EOF'
 [zerotier]
 name=ZeroTier, Inc. RPM Release Repository
 baseurl=https://download.zerotier.com/redhat/fc/$releasever
@@ -16,13 +16,12 @@ gpgkey=https://download.zerotier.com/contact@zerotier.com.gpg
 EOF
 
 if ! rpm-ostree status | grep -q zerotier-one; then
-  sudo rpm-ostree install zerotier-one  
+  sudo rpm-ostree install zerotier-one
 else
   echo "ZeroTier already installed"
 fi
 
 sudo rpm-ostree apply-live
-
 sudo systemctl enable --now zerotier-one.service
 
 echo "Waiting for ZeroTier daemon..."
@@ -34,21 +33,29 @@ for i in {1..15}; do
 done
 
 sudo zerotier-cli join "$NETWORK_ID"
-
-echo "Waiting for ZeroTier interface (network must be authorized on ZeroTier Central)..."
-ZTIFACE=""
-for i in {1..15}; do
-  ZTIFACE=$(ip -o link show | awk -F': ' '/zt/{print $2}' | head -n1 || true)
-  if [[ -n "$ZTIFACE" ]]; then
-    break
-  fi
-  sleep 2
-done
-
-echo "Interface detected: $ZTIFACE"
+echo "Go to Zerotier Central (https://my.zerotier.com/) and authorize this device."
+sleep 2
 
 if [[ "$ENABLE_GAMING_FIX" == "y" ]]; then
-  echo "Applying LAN gaming compatibility routes..."
+  echo "Waiting for ZeroTier interface."
+  ZTIFACE=""
+  for i in {1..40}; do
+    ZTIFACE=$(ip -o link show | awk -F': ' '/zt/{print $2}' | head -n1 || true)
+    if [[ -n "$ZTIFACE" ]]; then
+      break
+    fi
+    sleep 3
+  done
+
+  if [[ -z "$ZTIFACE" ]]; then
+    echo "Warning: ZeroTier interface not detected. Authorize the device at https://my.zerotier.com"
+    echo "Then run manually:"
+    echo "sudo ip route add 255.255.255.255 dev <ztXXXXXX>"
+    echo "sudo ip route add 224.0.0.0/4 dev <ztXXXXXX>"
+    exit 0
+  fi
+  
+  echo "Applying LAN gaming compatibility routes on $ZTIFACE..."
   sudo ip route add 255.255.255.255 dev "$ZTIFACE" 2>/dev/null || true
   sudo ip route add 224.0.0.0/4 dev "$ZTIFACE" 2>/dev/null || true
 fi
