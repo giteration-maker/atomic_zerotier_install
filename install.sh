@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NETWORK_ID="${1:-}"
-if [[ -z "$NETWORK_ID" ]]; then
-  read -rp "Enter ZeroTier network ID: " NETWORK_ID
-fi
+read -rp "Enter ZeroTier network ID: " NETWORK_ID
 
 read -rp "Enable LAN gaming compatibility fixes? (y/n): " ENABLE_GAMING_FIX
 ENABLE_GAMING_FIX=$(echo "$ENABLE_GAMING_FIX" | tr '[:upper:]' '[:lower:]')
