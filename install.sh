@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-read -rp "Enter ZeroTier network ID: " NETWORK_ID
-read -rp "Enable LAN gaming compatibility fixes? (y/n): " ENABLE_GAMING_FIX
-ENABLE_GAMING_FIX=$(echo "$ENABLE_GAMING_FIX" | tr '[:upper:]' '[:lower:]')
-
 sudo tee /etc/yum.repos.d/zerotier.repo >/dev/null <<'EOF'
 [zerotier]
 name=ZeroTier, Inc. RPM Release Repository
@@ -36,6 +32,8 @@ if ! sudo zerotier-cli status &>/dev/null; then
   exit 1
 fi
 
+read -rp "Enter ZeroTier network ID: " NETWORK_ID
+
 while true; do
   if sudo zerotier-cli join "$NETWORK_ID"; then
     echo "Joined network $NETWORK_ID successfully"
@@ -47,6 +45,9 @@ while true; do
 done
 
 echo "Go to ZeroTier Central (https://my.zerotier.com/) and authorize this device."
+
+read -rp "Enable LAN gaming compatibility fixes? (y/n): " ENABLE_GAMING_FIX
+ENABLE_GAMING_FIX=$(echo "$ENABLE_GAMING_FIX" | tr '[:upper:]' '[:lower:]')
 
 if [[ "$ENABLE_GAMING_FIX" == "y" ]]; then
   echo "Waiting for ZeroTier interface..."
