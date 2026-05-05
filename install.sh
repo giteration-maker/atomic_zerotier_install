@@ -12,12 +12,13 @@ EOF
 
 if ! rpm-ostree status | grep -q zerotier-one; then
   sudo rpm-ostree install zerotier-one
+  sudo rpm-ostree apply-live
+  sudo systemctl enable --now zerotier-one.service
 else
   echo "ZeroTier already installed"
 fi
 
-sudo rpm-ostree apply-live
-sudo systemctl enable --now zerotier-one.service
+
 
 echo "Waiting for ZeroTier daemon..."
 for i in {1..15}; do
