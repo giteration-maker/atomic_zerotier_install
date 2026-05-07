@@ -12,66 +12,68 @@ EOF
 
 if ! rpm-ostree status | grep -q zerotier-one; then
   sudo rpm-ostree install zerotier-one
-  sudo rpm-ostree apply-live
-  sudo systemctl enable --now zerotier-one.service
 else
   echo "ZeroTier already installed"
 fi
 
+sudo rpm-ostree apply-live
+sudo systemctl enable --now zerotier-one.service
 
+read -rp "Do you want to Join a ZeroTier network now? (y/n): " JOIN_NETWORK
+JOIN_NETWORK=$(echo "$JOIN_NETWORK" | tr '[:upper:]' '[:lower:]')
 
-echo "Waiting for ZeroTier daemon..."
-for i in {1..15}; do
-  if sudo zerotier-cli status &>/dev/null; then
-    break
+if [[ "$JOIN_NETWORK" == "y" ]]; then
+  echo "Waiting for ZeroTier daemon..."
+  for i in {1..15}; do
+    if sudo zerotier-cli status &>/dev/null; then
+      break
+    fi
+    sleep 2
+  done
+
+  if ! sudo zerotier-cli status &>/dev/null; then
+    echo "Error: ZeroTier daemon did not start in time."
+    exit 1
   fi
-  sleep 2
-done
 
-if ! sudo zerotier-cli status &>/dev/null; then
-  echo "Error: ZeroTier daemon did not start in time."
-  exit 1
-fi
-
-read -rp "Enter ZeroTier network ID: " NETWORK_ID
-
-while true; do
-  if sudo zerotier-cli join "$NETWORK_ID"; then
-    echo "Joined network $NETWORK_ID successfully"
-    break
-  else
-    echo "Error: Failed to join network $NETWORK_ID"
-    read -rp "Enter ZeroTier network ID: " NETWORK_ID
-  fi
-done
-
-echo "Go to ZeroTier Central (https://my.zerotier.com/) and authorize this device."
+  read -rp "Enter ZeroTier network ID: " NETWORK_ID
+  while true; do
+    if sudo zerotier-cli join "$NETWORK_ID"; then
+      echo "Joined network $NETWORK_ID successfully"
+      echo "Go to ZeroTier Central (https://my.zerotier.com/) and authorize this device."
+      break
+    else
+      echo "Error: Failed to join network $NETWORK_ID"
+      read -rp "Enter ZeroTier network ID: " NETWORK_ID
+    fi
+  done
 
 read -rp "Enable LAN gaming compatibility fixes? (y/n): " ENABLE_GAMING_FIX
 ENABLE_GAMING_FIX=$(echo "$ENABLE_GAMING_FIX" | tr '[:upper:]' '[:lower:]')
 
-if [[ "$ENABLE_GAMING_FIX" == "y" ]]; then
-  echo "Waiting for ZeroTier interface..."
-  ZTIFACE=""
-  for i in {1..40}; do
-    ZTIFACE=$(ip -o link show | awk -F': ' '/zt/{print $2}' | head -n1 || true)
-    if [[ -n "$ZTIFACE" ]]; then
-      break
+  if [[ "$ENABLE_GAMING_FIX" == "y" ]]; then
+    echo "Waiting for ZeroTier interface..."
+    ZTIFACE=""
+    for i in {1..40}; do
+      ZTIFACE=$(ip -o link show | awk -F': ' '/zt/{print $2}' | head -n1 || true)
+      if [[ -n "$ZTIFACE" ]]; then
+        break
+      fi
+      sleep 3
+    done
+
+    if [[ -z "$ZTIFACE" ]]; then
+      echo "Warning: ZeroTier interface not detected. Authorize the device at https://my.zerotier.com"
+      echo "Then run manually:"
+      echo "  sudo ip route add 255.255.255.255 dev <ztXXXXXX>"
+      echo "  sudo ip route add 224.0.0.0/4 dev <ztXXXXXX>"
+      exit 0
     fi
-    sleep 3
-  done
 
-  if [[ -z "$ZTIFACE" ]]; then
-    echo "Warning: ZeroTier interface not detected. Authorize the device at https://my.zerotier.com"
-    echo "Then run manually:"
-    echo "  sudo ip route add 255.255.255.255 dev <ztXXXXXX>"
-    echo "  sudo ip route add 224.0.0.0/4 dev <ztXXXXXX>"
-    exit 0
+    echo "Applying LAN gaming compatibility routes on $ZTIFACE..."
+    sudo ip route add 255.255.255.255 dev "$ZTIFACE" 2>/dev/null || true
+    sudo ip route add 224.0.0.0/4 dev "$ZTIFACE" 2>/dev/null || true
   fi
-
-  echo "Applying LAN gaming compatibility routes on $ZTIFACE..."
-  sudo ip route add 255.255.255.255 dev "$ZTIFACE" 2>/dev/null || true
-  sudo ip route add 224.0.0.0/4 dev "$ZTIFACE" 2>/dev/null || true
 fi
 
 echo "Done."
