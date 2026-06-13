@@ -54,7 +54,7 @@ ENABLE_GAMING_FIX=$(echo "$ENABLE_GAMING_FIX" | tr '[:upper:]' '[:lower:]')
   if [[ "$ENABLE_GAMING_FIX" == "y" ]]; then
     echo "Waiting for ZeroTier interface..."
     ZTIFACE=""
-    for i in {1..40}; do
+    for i in {1..60}; do
       ZTIFACE=$(ip -o link show | awk -F': ' '/zt/{print $2}' | head -n1 || true)
       if [[ -n "$ZTIFACE" ]]; then
         break
